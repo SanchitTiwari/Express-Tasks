@@ -1,16 +1,9 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
-const bcrypt = require('bcryptjs');
+const { body } = require('express-validator');
 const router = express.Router();
-const User = require('./model.js');
+const { validate, validateToken } = require('./middleware');
+const { registerUser, loginUser, getUser, deleteUser, listUsers } = require('./controller');
 
-const validate = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-};
 router.post('/register', [
     body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long')
                     .custom(async (value) => {
@@ -36,43 +29,15 @@ router.post('/register', [
                 body('id').optional().isMongoId().withMessage('Invalid ID'),
                 body('firstName').optional().trim().notEmpty().withMessage('First name is required'),
                 body('lastName').optional().trim().notEmpty().withMessage('Last name is required')
-], validate, async (req, res) => {
-    try {
-        const { username, password, email, id, firstName, lastName } = req.body;
+],
+ validate, registerUser);
 
-        // The password stored in the database would be encrypted using bcryptjs
-        const hashedPassword = await bcrypt.hash(password, 10);
+router.post('/login', loginUser);
 
-        const newUser = new User({
-            username,
-            password: hashedPassword,
-            email,
-            id,
-            firstName,
-            lastName
-        });
-        await newUser.save();
+router.get('/get', validateToken, getUser);
 
-        res.status(200).json({ message: 'User registered successfully' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
-router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+router.delete('/delete', validateToken, deleteUser);
 
-    const user = await User.findOne({ username });
-    if (!user) {
-        return res.status(400).json({ error: 'Invalid username or password' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-        return res.status(400).json({ error: 'Invalid username or password' });
-    }
-
-    res.status(200).json({ access_token: user._id });
-});
+router.get('/list/:page', listUsers);
 
 module.exports = router;
