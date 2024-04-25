@@ -59,5 +59,20 @@ router.post('/register', [
         res.status(500).send('Server Error');
     }
 });
+router.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    const user = await User.findOne({ username });
+    if (!user) {
+        return res.status(400).json({ error: 'Invalid username or password' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+        return res.status(400).json({ error: 'Invalid username or password' });
+    }
+
+    res.status(200).json({ access_token: user._id });
+});
 
 module.exports = router;
