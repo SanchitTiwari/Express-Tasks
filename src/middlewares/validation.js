@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const User = require('./src/models/model.js');
+const User = require('../models/model.js');
 
 const validateRegistration = [
     body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long')
