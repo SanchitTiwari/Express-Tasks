@@ -41,7 +41,7 @@ const loginUser = async (req, res) => {
 };
 const getUser = async (req, res) => {
     try {
-        const access_token = req.headers['access_token'];
+        const access_token = req.query.access_token;
         const user = await User.findOne({ _id: access_token });
         if (!user) {
             return res.status(400).json({ error: 'Invalid access token' });

@@ -1,5 +1,6 @@
 const { body } = require('express-validator');
 const User = require('../models/model.js');
+const { validationResult } = require('express-validator');
 
 const validateRegistration = [
     body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long')
@@ -22,8 +23,7 @@ const validateRegistration = [
             if (user) {
                 return Promise.reject('Email already exists');
             }
-        }),
-    body('id').optional().isMongoId().withMessage('Invalid ID'),
+        }), // removed mongoDB ID validation
     body('firstName').optional().trim().notEmpty().withMessage('First name is required'),
     body('lastName').optional().trim().notEmpty().withMessage('Last name is required')
 ];
