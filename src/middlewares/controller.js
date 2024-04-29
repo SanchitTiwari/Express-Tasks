@@ -4,7 +4,8 @@ const User = require('../models/model.js');
 const AccessToken = require('../models/accessTokenModel.js');
 const passport = require('passport');
 var LocalStrategy = require('passport-local');
-const config = require('./src/config/config.js');
+const config = require('../config/config.js');
+
 
 // const registerUser = async (req, res) => {
 //     try {
@@ -147,7 +148,7 @@ const listUsers = async (req, res) => {
         const page = parseInt(req.params.page);
 
         // Value provided the user or else the default value from the config file is taken
-        const usersPerPage = req.body.usersPerPage || config.usersPerPage;
+        const usersPerPage = req.body.usersPerPage  || config.usersPerPage;
 
         const skip = (page - 1) * usersPerPage;
         const users = await User.find().skip(skip).limit(usersPerPage); 
