@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 const User = require('../models/model.js');
 const { validationResult } = require('express-validator');
+const AccessToken = require('../models/accessTokenModel.js');
 
 const validateRegistration = [
     body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long')
@@ -37,10 +38,16 @@ const validate = (req, res, next) => {
     next();
 };
 
+// updated middleware to check for access token wheather its missing/invalid/expired
+
 const validateToken = async (req, res, next) => {
     const access_token = req.headers['access_token'];
     if (!access_token) {
         return res.status(400).json({ error: 'Access token is missing' });
+    }
+    const tokenDetails = await AccessToken.findOne({ access_token: access_token });
+    if (!tokenDetails || new Date() > tokenDetails.expiry) {
+        return res.status(401).json({ error: 'Invalid or expired access token' });
     }
     next();
 };

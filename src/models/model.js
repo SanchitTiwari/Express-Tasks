@@ -28,7 +28,17 @@ const userSchema = new mongoose.Schema({
     lastName: 
     {   type: String, 
         required: true 
-    }
+    },
+
+    // added addresses in user model schema in the form of array, multiple addresses can be stored as subdocuments 
+
+    addresses: [{
+        address: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        pin_code: { type: String, required: true },
+        phone_no: { type: String, required: true }
+    }]
 });
 
 module.exports = mongoose.model('User', userSchema); 
