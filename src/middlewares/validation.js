@@ -11,13 +11,13 @@ const validateRegistration = [
                 return Promise.reject('Username already exists');
             }
         }),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-    body('confirmPassword').custom((value, { req }) => {
-        if (value !== req.body.password) {
-            throw new Error('Password confirmation does not match password');
-        }
-        return true;
-    }),
+    body('email').isEmail().withMessage('Invalid email')
+        .custom(async (value) => {
+            const user = await User.findOne({ email: value });
+            if (user) {
+                return Promise.reject('Email already exists');
+            }
+        }),
     body('email').isEmail().withMessage('Invalid email')
         .custom(async (value) => {
             const user = await User.findOne({ email: value });
