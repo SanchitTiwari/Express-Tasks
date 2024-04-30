@@ -2,18 +2,39 @@ const express = require('express');
 const router = express.Router();
 const { validateRegistration, validate, validateToken } = require('../middlewares/validation');
 const { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress } = require('../middlewares/controller');
+const passport = require('passport')
 
-router.post('/register', validateRegistration, validate, registerUser);
+//UPDATED ALL THE ROUTES TO FOLLOW REST API NAMING CONVENTIONS
 
-router.post('/login', loginUser);
+// user registration route
+router.post('/users/register', validateRegistration, validate, registerUser);
 
-router.get('/get', validateToken, getUser);
+// Login route with Passport JS Authentication
 
-router.delete('/delete', validateToken, deleteUser);
+router.post('/users/login', function(req, res, next) {
+    passport.authenticate('local', function(err, user, info) {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {        //authentication Failed
+            return res.status(401).json({ message: 'Invalid username or password' });
+        }
+                            // authentication successful
+        return res.status(200).json({ message: 'Login successful', user: user });
+    })(req, res, next);
+});
 
-router.get('/list/:page', listUsers);
+// Get user details
+router.get('/users/:userId',getUser);
 
-router.post('/address', validateToken, addAddress); //added route for address post request  
+// Delete user
+router.delete('/users/:userId',deleteUser);
+
+// List users with pagination
+router.get('/users/list/:page', listUsers);
+
+// Add address to user
+router.post('/users/:userId/address', addAddress);
 
 const userRoutes = router;
 module.exports = userRoutes;
