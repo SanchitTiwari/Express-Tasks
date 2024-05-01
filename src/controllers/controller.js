@@ -6,7 +6,9 @@ const passport = require('passport');
 var LocalStrategy = require('passport-local');
 const config = require('../config/Constants.js');
 const jwt = require('jsonwebtoken');
-
+const multer = require('multer')
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 // const registerUser = async (req, res) => {
 //     try {
 //         const { username, password, email, id, firstName, lastName } = req.body;
@@ -79,6 +81,20 @@ const registerUser = async (req, res) => {
         });
 
         await newUser.save();
+        const msg = {
+            to: newUser.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Registration SuccessFul',
+            text: 'Thank Your registering to the node.js application',
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
         res.status(200).json({ message: 'User registered successfully' });
     } catch (err) {
         console.error(err.message);
@@ -218,6 +234,20 @@ const generatePasswordResetToken = async(req, res) =>{
           { expiresIn: 15*60000 } 
         );
         res.status(200).json({ token, message:"Token Expires in 15 minutes" });
+        const msg = {
+            to: user.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Password reset token generated',
+            text: token,
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Password Reset Token Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
       } 
       catch (error) {
         console.error(error);
@@ -266,6 +296,20 @@ const verifyAndResetPassword = async(req, res) =>{
             { $push: { jwtBlacklist: { blTonken:token } } }
          )           // after the token is used, push it into blacklist token array so that it cant be used again
         await user.save();
+        const msg = {
+            to: user.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Password Reset Successful',
+            text: 'Your Password was successfully resetted',
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Password Reset Success Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
         res.status(200).json({ message: "Password reset successfully" });
         } 
       
@@ -279,4 +323,4 @@ const verifyAndResetPassword = async(req, res) =>{
         }
 }   
 
-module.exports = { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress, deleteAddresses, generatePasswordResetToken, verifyAndResetPassword };
+module.exports = { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress, deleteAddresses, generatePasswordResetToken, verifyAndResetPassword};
