@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { validateRegistration, validate, validateToken } = require('../middlewares/validation');
-const { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress } = require('../middlewares/controller');
+const { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress, deleteAddresses,generatePasswordResetToken,verifyAndResetPassword} = require('../controllers/controller');
 const passport = require('passport')
+const {uploadProfilePhoto} = require('../fileUpload/multer.js')
+const {onlineUpload} = require('../fileUpload/cloudinary.js')
 
 //UPDATED ALL THE ROUTES TO FOLLOW REST API NAMING CONVENTIONS
 
@@ -35,6 +37,19 @@ router.get('/users/list/:page', listUsers);
 
 // Add address to user
 router.post('/users/:userId/address', addAddress);
+
+// Delete address(es) of a user
+router.delete('/users/:userId/address', deleteAddresses);
+
+// Generate password reset JWT token
+router.post('/users/forgot-password', generatePasswordResetToken);
+
+// Verify the token and reset password
+router.put('/users/verify-reset-password/:password-reset-token', verifyAndResetPassword);
+
+router.put('/users/profile-image', uploadProfilePhoto);
+
+router.put('/users/profile-image-online',onlineUpload);
 
 const userRoutes = router;
 module.exports = userRoutes;
