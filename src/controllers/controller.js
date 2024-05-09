@@ -4,9 +4,11 @@ const User = require('../models/model.js');
 const AccessToken = require('../models/accessTokenModel.js');
 const passport = require('passport');
 var LocalStrategy = require('passport-local');
-const config = require('../config/config.js');
-
-
+const config = require('../config/Constants.js');
+const jwt = require('jsonwebtoken');
+const multer = require('multer')
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 // const registerUser = async (req, res) => {
 //     try {
 //         const { username, password, email, id, firstName, lastName } = req.body;
@@ -79,6 +81,20 @@ const registerUser = async (req, res) => {
         });
 
         await newUser.save();
+        const msg = {
+            to: newUser.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Registration SuccessFul',
+            text: 'Thank Your registering to the node.js application',
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
         res.status(200).json({ message: 'User registered successfully' });
     } catch (err) {
         console.error(err.message);
@@ -181,4 +197,130 @@ const addAddress = async (req, res) => {
 };
 
 
-module.exports = { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress };
+const deleteAddresses= async (req, res) => {
+    const address_ids = req.body.address_ids;
+    const access_token = req.params.access_token;
+    if (!address_ids || !Array.isArray(address_ids) || address_ids.length === 0) {
+        return res.status(400).json({ error: 'Address IDs array is required' });
+    }
+    try {
+        const user = await User.findById(access_token);
+        User.updateOne(
+            { },
+            { $pull: { addresses: { _id: { $in: address_ids } } } }
+         )
+         
+        await User.save();
+        return res.status(200).json({ message: 'Addresses deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting addresses:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+// Generates password reset token for 15 minutes based on email verification from the User Schema'
+// JWT token is generated based on email and JWT_SECRET key 
+
+const generatePasswordResetToken = async(req, res) =>{
+    try {
+        const { email } = req.body;                    
+        const user = await User.findOne({ email });   
+        if (!user) {
+          return res.status(404).json({ message: "Email not found" });
+        }
+        const token = jwt.sign(
+          { email: user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: 15*60000 } 
+        );
+        res.status(200).json({ token, message:"Token Expires in 15 minutes" });
+        const msg = {
+            to: user.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Password reset token generated',
+            text: token,
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Password Reset Token Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
+      } 
+      catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+
+}
+
+// verifyAndResetPassword Controller would take three arguments from the request body -> JWT Token, newPassword and confirmPassword 
+// then it would match new password and confirm password 
+// it would match JWT Token along with the email that was used to generate the token 
+// if token matched it would save the new encrypted password
+// catch block to check for expired tokens 
+
+// after every successful password change the jwt token would be stored in a blacklist and before every consecutive change request
+// it would check if the token had been previously used 
+
+const verifyAndResetPassword = async(req, res) =>{
+    try {
+        const { token, newPassword, confirmPassword } = req.body;
+        
+        const blacklistToken = await User.findOne({ blToken:token});
+        if (blacklistToken) {
+            return res.status(400).json({ message: 'JWT Token Already Used' });   // check if token had been already used
+        }
+
+        if (newPassword != confirmPassword) {
+          return res.status(400).json({ message: "New password and confirm password do not match" });
+        }
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (!decodedToken || !decodedToken.email) {
+          return res.status(400).json({ message: "Invalid token" });
+        }
+
+        const user = await User.findOne({ email: decodedToken.email });
+
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        User.password = hashedPassword;
+        User.updateOne(
+            { },
+            { $push: { jwtBlacklist: { blTonken:token } } }
+         )           // after the token is used, push it into blacklist token array so that it cant be used again
+        await user.save();
+        const msg = {
+            to: user.email,
+            from: 'tiwarisanchit47@gmail.com',
+            subject: 'Password Reset Successful',
+            text: 'Your Password was successfully resetted',
+            }
+            sgMail.send(msg)
+            .then(() => 
+            {
+                console.log('Password Reset Success Email sent')
+            })
+            .catch((error) => {
+                console.error(error)
+             })
+        res.status(200).json({ message: "Password reset successfully" });
+        } 
+      
+        catch (error) {
+            console.error(error);
+            if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+              res.status(401).json({ message: "Invalid or expired token" });
+            } else {
+             res.status(500).json({ message: "Internal Server Error" });
+            }
+        }
+}   
+
+module.exports = { registerUser, loginUser, getUser, deleteUser, listUsers, addAddress, deleteAddresses, generatePasswordResetToken, verifyAndResetPassword};

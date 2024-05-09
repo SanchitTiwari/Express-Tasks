@@ -29,9 +29,10 @@ const userSchema = new mongoose.Schema({
     {   type: String, 
         required: true 
     },
-
+    jwtBlacklist: [{
+            blToken: {type: String, required: false}
+    }] ,
     // added addresses in user model schema in the form of array, multiple addresses can be stored as subdocuments 
-
     addresses: [{
         address: { type: String, required: true },
         city: { type: String, required: true },
